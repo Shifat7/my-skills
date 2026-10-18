@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Seconds-fast. The suite stays in CI. This hook is inert until
+# scripts/setup-hooks.sh sets core.hooksPath.
+set -euo pipefail
+
+root=$(git rev-parse --show-toplevel)
+
+is_all_zero() { case "$1" in ''|*[!0]*) return 1 ;; *) return 0 ;; esac; }
+
+refs=$(cat)
+real_push=0
+while read -r lref local_sha _rref _rsha; do
+  [ -n "${local_sha:-}" ] || continue
+  case "$lref" in refs/tags/*) continue ;; esac
+  is_all_zero "$local_sha" || { real_push=1; break; }
+done <<REFS
+$refs
+REFS
+
+if [ "$real_push" != "1" ]; then
+  exit 0
+fi
+
+if [ ! -x "$root/scripts/fast-gate.sh" ]; then
+  echo "pre-push: scripts/fast-gate.sh is missing or not executable"
+  exit 1
+fi
+
+"$root/scripts/fast-gate.sh" </dev/null
+python3 "$root/scripts/check-verify-block.py" </dev/null

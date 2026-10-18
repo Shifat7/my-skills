@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Push events always run. A draft pull request still runs on this template:
+# a skipped job is not a success, and this repo has no paths-ignore carve-out.
+# Add a docs-only skip only behind a script that fails closed. Do not copy
+# the skip list into a second file.
+
+jobs:
+  verify-block:
+    name: Verification block is wired
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Verification commands exist in this workflow
+        run: python3 scripts/check-verify-block.py
+
+  sensor-tests:
+    name: Template sensor tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: The checker fails when a command is missing from CI
+        run: python3 -m unittest tests/test_check_verify_block.py
+
+  fast-gate:
+    name: Fast gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Syntax gate
+        run: bash scripts/fast-gate.sh
